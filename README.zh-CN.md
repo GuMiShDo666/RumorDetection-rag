@@ -132,9 +132,10 @@ git clone https://github.com/GuMiShDo666/RumerDetection-rag.git
 cd RumerDetection-rag
 sudo DASHSCOPE_API_KEY="your_dashscope_api_key" \
   PUBLIC_HOST="your_server_public_ip" \
-  BASIC_AUTH_PASSWORD="Dongzexuan" \
   bash deploy/one_click_qwen_server.sh
 ```
+
+请在隐藏输入提示中设置独立的 Basic Auth 密码。无人值守部署时，请通过密钥存储安全注入 `BASIC_AUTH_PASSWORD`，不要把密码直接写在命令行里。密码不能为空、不能换行，且不得超过 72 字节；脚本不会打印密码。如果已有实例使用过旧版文档中的默认密码，请单独更换该实例的密码，仅更新仓库不会替换已部署的凭据。
 
 部署完成后访问：
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Avoid tracing credentials, including when invoked with bash -x.
+set +x
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/GuMiShDo666/RumerDetection-rag.git}"
@@ -6,7 +8,8 @@ APP_DIR="${APP_DIR:-/opt/rumordetection-rag}"
 APP_PORT="${APP_PORT:-7860}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 BASIC_AUTH_USER="${BASIC_AUTH_USER:-admin}"
-BASIC_AUTH_PASSWORD="${BASIC_AUTH_PASSWORD:-Dongzexuan}"
+BASIC_AUTH_PASSWORD="${BASIC_AUTH_PASSWORD:-}"
+export -n BASIC_AUTH_PASSWORD
 SERVICE_NAME="${SERVICE_NAME:-rumordetection-rag}"
 PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
 PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}"
@@ -23,6 +26,20 @@ INDEX_BATCH_SIZE="${INDEX_BATCH_SIZE:-256}"
 
 if [[ "$(id -u)" != "0" ]]; then
   echo "Run this script as root, for example: sudo DASHSCOPE_API_KEY=... bash deploy/one_click_qwen_server.sh" >&2
+  exit 1
+fi
+
+if [[ -z "${BASIC_AUTH_PASSWORD}" && -t 0 ]]; then
+  IFS= read -r -s -p "New Basic Auth password: " BASIC_AUTH_PASSWORD || BASIC_AUTH_PASSWORD=""
+  printf '\n' >&2
+fi
+if [[ -z "${BASIC_AUTH_PASSWORD}" ]]; then
+  echo "A unique Basic Auth password is required. Use the interactive prompt or supply BASIC_AUTH_PASSWORD securely for unattended deployment." >&2
+  exit 1
+fi
+# htpasswd reads a single line; bcrypt supports at most 72 password bytes.
+if ! (export LC_ALL=C; [[ "${BASIC_AUTH_PASSWORD}" != *$'\n'* && "${BASIC_AUTH_PASSWORD}" != *$'\r'* && ${#BASIC_AUTH_PASSWORD} -le 72 ]]); then
+  echo "BASIC_AUTH_PASSWORD must be a single line of at most 72 bytes." >&2
   exit 1
 fi
 
@@ -152,7 +169,8 @@ openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
   -out /etc/nginx/ssl/rumordetection-rag.crt \
   -subj "/CN=${PUBLIC_HOST}"
 
-htpasswd -bc /etc/nginx/.rumordetection-rag.htpasswd "${BASIC_AUTH_USER}" "${BASIC_AUTH_PASSWORD}"
+printf '%s\n' "${BASIC_AUTH_PASSWORD}" | htpasswd -iBc -- /etc/nginx/.rumordetection-rag.htpasswd "${BASIC_AUTH_USER}"
+unset BASIC_AUTH_PASSWORD
 
 cat > /etc/nginx/conf.d/rumordetection-rag.conf <<EOF
 server {
@@ -196,7 +214,6 @@ echo
 echo "Deployment complete."
 echo "URL: https://${PUBLIC_HOST}/"
 echo "Username: ${BASIC_AUTH_USER}"
-echo "Password: ${BASIC_AUTH_PASSWORD}"
 echo
 echo "Useful checks:"
 echo "  systemctl status ${SERVICE_NAME} --no-pager"

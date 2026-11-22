@@ -132,9 +132,10 @@ git clone https://github.com/GuMiShDo666/RumerDetection-rag.git
 cd RumerDetection-rag
 sudo DASHSCOPE_API_KEY="your_dashscope_api_key" \
   PUBLIC_HOST="your_server_public_ip" \
-  BASIC_AUTH_PASSWORD="Dongzexuan" \
   bash deploy/one_click_qwen_server.sh
 ```
+
+Enter a unique Basic Auth password at the hidden prompt. For unattended deployment, inject `BASIC_AUTH_PASSWORD` securely from your secret store rather than putting it on the command line. The script requires a non-empty, single-line password of at most 72 bytes and does not print it. If an existing instance used the formerly documented default, rotate that instance's password separately; updating this repository does not replace deployed credentials.
 
 After installation, open:
 
